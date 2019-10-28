@@ -1,5 +1,6 @@
 package com.example.mapswithcamera;
-import android.app.ActionBar;
+
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -12,19 +13,23 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
+
+
 
 public class ImageViewerFragment extends Fragment {
 
-    String photoPath;
-    String markerTitle;
+    private String photoPath;
+    private String ID;
+    private String markerTitle;
 
-    public ImageViewerFragment(String path, String title) {
+    private OnMarkerDeleteListener listener;
+
+
+    public ImageViewerFragment(String path, String name, String dbID) {
         photoPath = path;
-        markerTitle = title;
+        markerTitle = name;
+        ID = dbID;
     }
 
     @Override
@@ -44,7 +49,23 @@ public class ImageViewerFragment extends Fragment {
         title.setText(markerTitle);
         return rootView;
     }
-    /*@Override
+
+    public interface OnMarkerDeleteListener {
+        public void onMarkerToBeDeleted(String markerName, String dbID);
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        if (context instanceof OnMarkerDeleteListener) {
+            listener = (OnMarkerDeleteListener) context;
+        }
+        else {
+            throw new ClassCastException(context.toString() + " must implement ImageViewerFragment.OnMarkerDeleteListener");
+        }
+    }
+
+    @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.fragment_menu, menu);
     }
@@ -53,12 +74,13 @@ public class ImageViewerFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         // handle item selection
         switch (item.getItemId()) {
-            case R.id.option_exit_fragment:
-                // do s.th.
-                onDestroy();
+            case R.id.option_delete_fragment:
+                //Delete the note
+                listener.onMarkerToBeDeleted(markerTitle, ID);
+                getActivity().onBackPressed();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
-    }*/
+    }
 }

@@ -15,7 +15,10 @@
         android:id="@+id/btnlaunchCamera"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Launch Camera" />
+        android:backgroundTint="@color/colorAccent"
+        android:fontFamily="@font/exo_2_bold"
+        android:text="Take Picture"
+        android:textColor="#FFFFFF" />
 
     <fragment
         android:id="@+id/map"

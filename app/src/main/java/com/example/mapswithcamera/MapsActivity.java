@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import android.content.ContentValues;
 import android.content.DialogInterface;
@@ -38,11 +39,12 @@ import com.google.android.gms.tasks.Task;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 import static android.provider.SettingsSlicesContract.KEY_LOCATION;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, View.OnClickListener, GoogleMap.OnMarkerClickListener {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, View.OnClickListener, GoogleMap.OnMarkerClickListener, ImageViewerFragment.OnMarkerDeleteListener {
 
     private static final String TAG = MapsActivity.class.getSimpleName();
     private CameraPosition mCameraPosition;
@@ -68,17 +70,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     static final int REQUEST_IMAGE_CAPTURE = 1;
     static final int REQUEST_TAKE_PHOTO = 1;
-    String mCurrentPhotoPath;
-    String userText;
+    private String mCurrentPhotoPath;
+    private String userText;
     private int cameraFlag = 0;
+    private Cursor myCursor = null;
+    ArrayList<Marker> markerList = new ArrayList<>();
 
-    Cursor myCursor = null;
+    Fragment ImageViewerFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         initializeComponents();
+        ImageViewerFragment = (Fragment) getSupportFragmentManager().findFragmentById(R.id.image_viewer_fragment);
 
         // Retrieve location and camera position from saved instance state.
         if (savedInstanceState != null) {
@@ -154,7 +159,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (myCursor != null && myCursor.getCount() > 0) {
             for (myCursor.moveToFirst(); !myCursor.isAfterLast(); myCursor.moveToNext()) {
                 LatLng latLon = new LatLng(myCursor.getDouble(3), myCursor.getDouble(4));
-                mMap.addMarker(new MarkerOptions().position(latLon)).setTag(myCursor.getString(1) + ":" + myCursor.getString(2));
+                String tempMarkerName = myCursor.getString(1);
+                Marker tempMarker = mMap.addMarker(new MarkerOptions().position(latLon));
+                tempMarker.setTag(myCursor.getInt(0) + ":" + tempMarkerName + ":" + myCursor.getString(2));
+                tempMarker.setTitle(tempMarkerName);
+                markerList.add(tempMarker);
             }
         }
         mMap.setOnMarkerClickListener(this);
@@ -165,10 +174,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         String temp = (String) marker.getTag();
         String[] tempSeparate = temp.split(":");
-        ft.replace(R.id.placeholder, new ImageViewerFragment(tempSeparate[1], tempSeparate[0]));
+        ft.replace(R.id.placeholder, new ImageViewerFragment(tempSeparate[2], tempSeparate[1], tempSeparate[0]));
         ft.addToBackStack(null);
         ft.commit();
         return true;
+    }
+
+    @Override
+    public void onMarkerToBeDeleted(String markerName, String dbID) {
+        Log.d("booty", markerName + " markerName");
+        Log.d("booty", markerList.size() + " markerListSize");
+        for (int i = 0; i < markerList.size(); i++) {
+            Log.d("booty", markerList.get(i).getTitle() + " markerTitle");
+            if (markerList.get(i).getTitle().equals(markerName)) {
+                markerList.get(i).remove();
+                markerList.remove(i);
+            }
+        }
+        getContentResolver().delete(Uri.parse(MarkerProvider.CONTENT_URI + "/" + dbID), null, null);
     }
 
     //Set the OnClick Listener for buttons
@@ -205,9 +228,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Double lat = mLastKnownLocation.getLatitude();
                     Double lon = mLastKnownLocation.getLongitude();
                     LatLng current = new LatLng(lat, lon);
-                    mMap.addMarker(new MarkerOptions().position(current)).setTag(userText + ":" + mCurrentPhotoPath);
 
-                    createNewMarker(userText, mCurrentPhotoPath, lat, lon);
+                    int newDBID = createNewMarker(userText, mCurrentPhotoPath, lat, lon);
+                    Marker tempMarker = mMap.addMarker(new MarkerOptions().position(current));
+                    tempMarker.setTag(newDBID + ":" + userText + ":" + mCurrentPhotoPath);
+                    tempMarker.setTitle(userText);
+                    markerList.add(tempMarker);
+                    //mMap.addMarker(new MarkerOptions().position(current)).setTag(userText + ":" + mCurrentPhotoPath);
+                    //markersList.add(mMap.addMarker(new MarkerOptions().position(current)));
+                    //markersList.get(markersList.size()-1).setTag(userText + ":" + mCurrentPhotoPath);
                 }
             });
 
@@ -224,7 +253,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     //Create a new note with the title "New Note" and content "Note Content"
-    public void createNewMarker(String title, String absolutePath, Double lat, Double lon){
+    public int createNewMarker(String title, String absolutePath, Double lat, Double lon){
         //Create a ContentValues object
         ContentValues myCV = new ContentValues();
         //Put key_value pairs based on the column names, and the values
@@ -234,7 +263,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         myCV.put(MarkerProvider.MARKER_TABLE_COL_LONGITUDE, lon);
 
         //Perform the insert function using the ContentProvider
-        getContentResolver().insert(MarkerProvider.CONTENT_URI, myCV);
+        String itemID = getContentResolver().insert(MarkerProvider.CONTENT_URI, myCV).getLastPathSegment();
+        return Integer.parseInt(itemID);
     }
 
     private File createImageFile() throws IOException {
