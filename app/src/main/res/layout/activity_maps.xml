@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:map="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MapsActivity">
 
+    <FrameLayout
+        android:id="@+id/placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"></FrameLayout>
+
     <Button
-        android:id="@+id/launchCamera"
+        android:id="@+id/btnlaunchCamera"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Launch Camera" />
@@ -19,5 +23,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
     </fragment>
+
 
 </LinearLayout>
